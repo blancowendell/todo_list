@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { login } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../services/authService';
 import {
   showErrorToast,
   showSuccessToast,
@@ -12,9 +13,11 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login: authLogin } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
     if (!username || !password) {
       setError('Please fill out both fields.');
       return;
@@ -25,19 +28,15 @@ const LoginPage = () => {
     try {
       const res = await login(username, password);
       
-      if (res.status === 200) {
-        localStorage.setItem('token', res.data.token);
+      if (res.data?.token) {
+        authLogin(res.data.token);
         showSuccessToast("Login successful!");
-        navigate('/');
-        console.log("Login successful, navigating...");
       } else if (res.error === 'Invalid credentials') {
-        showWarningToast("Invalid input. Please try again.");
+        showWarningToast("Invalid credentials. Please try again.");
       } else if (res.error === 'User not found') {
         showWarningToast("User not found.");
-      } else if (res.error === 'Login failed') {
-        showErrorToast("Invalid credentials.");
       } else {
-        showErrorToast("Operation error!");
+        showErrorToast("Login failed. Please try again.");
       }
     } catch (err) {
       showErrorToast("Operation failed. Please try again.");
@@ -51,7 +50,7 @@ const LoginPage = () => {
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">Login</h2>
         
-        <form className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="input-group">
             <label htmlFor="username" className="block text-gray-600">Username</label>
             <input
@@ -80,9 +79,8 @@ const LoginPage = () => {
 
           <div className="flex justify-between items-center">
             <button
-              type="button"
+              type="submit"
               className={`w-full bg-blue-500 text-white p-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={handleLogin}
               disabled={loading}
             >
               {loading ? 'Logging in...' : 'Login'}
